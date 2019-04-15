@@ -2,20 +2,17 @@
 authors = ["andylokandy <andylokandy@hotmail.com>"]
 edition = "2018"
 name = "simsearch"
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT/Apache-2.0"
 
 description = "A simple and lightweight fuzzy search engine that works in memory, searching for similar strings (a pun here)."
 documentation = "https://docs.rs/simsearch"
 repository = "https://github.com/andylokandy/simsearch-rs"
 homepage = "https://github.com/andylokandy/simsearch-rs"
-reame = "README.md"
+readme = "README.md"
 
 keywords = ["fuzzy", "search", "lightweight", "pattern", "strsim"]
 categories = ["algorithms", "text-processing"]
-
-[badges]
-travis-ci = { repository = "andylokandy/simsearch-rs" }
 
 [dependencies]
 strsim = "0.9.1"

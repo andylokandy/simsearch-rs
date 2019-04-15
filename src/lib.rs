@@ -121,7 +121,9 @@ where
 
         self.ids.push((id, id_num));
 
-        let tokens = self.tokenize(tokens);
+        let mut tokens = self.tokenize(tokens);
+        tokens.sort();
+        tokens.dedup();
 
         for token in tokens.clone() {
             self.reverse_map
@@ -178,7 +180,9 @@ where
     ///
     /// assert_eq!(results, &[1]);
     pub fn search_tokenized(&self, pattern_tokens: &[&str]) -> Vec<Id> {
-        let pattern_tokens = self.tokenize(pattern_tokens);
+        let mut pattern_tokens = self.tokenize(pattern_tokens);
+        pattern_tokens.sort();
+        pattern_tokens.dedup();
 
         let mut token_scores: HashMap<&str, f64> = HashMap::new();
 
@@ -197,10 +201,11 @@ where
                         + normalized_levenshtein(&prefix_token, &pattern_token) as f64
                             / prefix_len as f64)
                         / 2.;
-                    token_scores
-                        .entry(token)
-                        .and_modify(|current| *current = current.max(score))
-                        .or_insert(0.);
+                    let score_current = token_scores
+                        .get(&token.as_str())
+                        .map(|score| *score)
+                        .unwrap_or(0.);
+                    token_scores.insert(token, score_current.max(score));
                 }
             }
         }

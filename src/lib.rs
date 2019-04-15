@@ -1,4 +1,4 @@
-//! A simple fuzzy search engine that works in memory, searching for
+//! A simple and lightweight fuzzy search engine that works in memory, searching for
 //! similar strings (a pun here).
 //!
 //! # Examples
@@ -77,12 +77,13 @@ where
     /// # Examples
     ///
     /// ```
-    /// use simsearch::SimSearch;
+    /// use simsearch::{SearchOptions, SimSearch};
     ///
-    /// let mut engine: SimSearch<&str> = SimSearch::new();
+    /// let mut engine: SimSearch<&str> = SimSearch::new_with(
+    ///     SearchOptions::new().stop_words(&[",", "."]));
     ///
-    /// engine.insert("BoJack Horseman", "an American adult animated
-    /// comedy-drama series created by Raphael Bob-Waksberg.
+    /// engine.insert("BoJack Horseman", "BoJack Horseman, an American
+    /// adult animated comedy-drama series created by Raphael Bob-Waksberg.
     /// The series stars Will Arnett as the title character,
     /// with a supporting cast including Amy Sedaris,
     /// Alison Brie, Paul F. Tompkins, and Aaron Paul.");
@@ -110,8 +111,8 @@ where
     ///
     /// let mut engine: SimSearch<&str> = SimSearch::new();
     ///
-    /// engine.insert_tokenized("Arya Stark", &["a fictional character
-    /// in American author George R. R", "portrayed by English actress."]);
+    /// engine.insert_tokenized("Arya Stark", &["Arya Stark", "a fictional
+    /// character in American author George R. R", "portrayed by English actress."]);
     pub fn insert_tokenized(&mut self, id: Id, tokens: &[&str]) {
         self.delete(&id);
 
@@ -301,8 +302,6 @@ pub struct SearchOptions {
 
 impl SearchOptions {
     /// Creates a blank new set of options ready for configuration.
-    ///
-    /// Initial options are set to:
     pub fn new() -> Self {
         SearchOptions {
             case_sensitive: false,
@@ -359,15 +358,12 @@ impl SearchOptions {
     /// assert_eq!(results, &[1]);
     /// ```
     pub fn stop_words(self, stop_words: &'static [&'static str]) -> Self {
-        SearchOptions {
-            stop_words: stop_words,
-            ..self
-        }
+        SearchOptions { stop_words, ..self }
     }
 
     /// Sets the threshold for search scoring.
     ///
-    /// Search result will be sorted by their scores. Scores
+    /// Search results will be sorted by their scores. Scores
     /// ranges from 0 to 1 when the 1 indicates the most relevant.
     /// Only the entries with scores greater than threshold will be returned.
     ///

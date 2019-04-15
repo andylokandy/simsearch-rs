@@ -4,7 +4,7 @@
 [![crates.io](https://img.shields.io/crates/v/simsearch.svg)](https://crates.io/crates/simsearch)
 [![docs.rs](https://docs.rs/simsearch/badge.svg)](https://docs.rs/simsearch)
 
-A simple fuzzy search engine that works in memory, searching for similar strings (a pun here).
+A simple and lightweight fuzzy search engine that works in memory, searching for similar strings (a pun here).
 
 ### [**Documentation**](https://docs.rs/simsearch)
 

@@ -29,10 +29,11 @@ fn main() -> io::Result<()> {
 
         let start = Instant::now();
         let pattern = pattern.replace("\r\n", "");
+        let res = engine.search(&pattern);
         let end = Instant::now();
 
         println!("pattern: {:?}", &pattern);
-        println!("results: {:?}", engine.search(&pattern));
+        println!("results: {:?}", res);
         println!("time: {:?}", end - start);
     }
 }

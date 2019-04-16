@@ -28,7 +28,6 @@ fn main() -> io::Result<()> {
             .expect("failed to read from stdin");
 
         let start = Instant::now();
-        let pattern = pattern.replace("\r\n", "");
         let res = engine.search(&pattern);
         let end = Instant::now();
 

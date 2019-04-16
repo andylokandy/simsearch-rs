@@ -1,11 +1,7 @@
-#![feature(test)]
-
-extern crate test;
-
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use std::fs::File;
 use std::io::Read;
 
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use json;
 use simsearch::SimSearch;
 

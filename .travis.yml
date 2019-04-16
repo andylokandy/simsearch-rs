@@ -15,4 +15,5 @@ branches:
 script:
   - |
       cargo test --verbose &&
-      cargo build --example books --verbose 
+      cargo build --example books --verbose &&
+      cargo bench --verbose

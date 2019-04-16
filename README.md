@@ -1,6 +1,6 @@
 # `simsearch`
 
-[![build status](https://travis-ci.com/andylokandy/simsearch.svg?branch=master)](https://travis-ci.com/andylokandy/simsearch-rs)
+[![Build Status](https://travis-ci.com/andylokandy/simsearch-rs.svg?branch=master)](https://travis-ci.com/andylokandy/simsearch-rs)
 [![crates.io](https://img.shields.io/crates/v/simsearch.svg)](https://crates.io/crates/simsearch)
 [![docs.rs](https://docs.rs/simsearch/badge.svg)](https://docs.rs/simsearch)
 

@@ -31,7 +31,7 @@ fn main() -> io::Result<()> {
         let res = engine.search(&pattern);
         let end = Instant::now();
 
-        println!("pattern: {:?}", &pattern);
+        println!("pattern: {:?}", pattern.trim());
         println!("results: {:?}", res);
         println!("time: {:?}", end - start);
     }

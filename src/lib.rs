@@ -27,8 +27,7 @@ where
     Id: PartialEq + Clone,
 {
     option: SearchOptions,
-    id_next: usize,
-    ids: Vec<(Id, usize)>,
+    ids: Vec<Option<Id>>,
     forward_map: HashMap<usize, Vec<String>>,
     reverse_map: HashMap<String, Vec<usize>>,
 }
@@ -55,7 +54,6 @@ where
     pub fn new_with(option: SearchOptions) -> Self {
         SimSearch {
             option,
-            id_next: 0,
             ids: Vec::new(),
             forward_map: HashMap::new(),
             reverse_map: HashMap::new(),
@@ -116,10 +114,8 @@ where
     pub fn insert_tokenized(&mut self, id: Id, tokens: &[&str]) {
         self.delete(&id);
 
-        let id_num = self.id_next;
-        self.id_next += 1;
-
-        self.ids.push((id, id_num));
+        let id_num = self.ids.len();
+        self.ids.push(Some(id));
 
         let mut tokens = self.tokenize(tokens);
         tokens.sort();
@@ -224,11 +220,12 @@ where
         let result_ids: Vec<Id> = result_scores
             .iter()
             .map(|(id_num, _)| {
-                self.ids
-                    .iter()
-                    .find(|(_, i)| i == id_num)
-                    .map(|(id, _)| id.clone())
-                    .unwrap()
+                self.ids[*id_num]
+                    .as_ref()
+                    .map(|id| id.clone())
+                    // this can go wrong only if something (e.g. delete) leaves us in an
+                    // inconsistent state
+                    .expect("id at id_num should be there")
             }).collect();
 
         result_ids
@@ -239,17 +236,16 @@ where
         let id_num = self
             .ids
             .iter()
-            .find(|(i, _)| i == id)
-            .map(|(_, id_num)| id_num);
+            .position(|i| i.as_ref() == Some(id));
         if let Some(id_num) = id_num {
-            for token in &self.forward_map[id_num] {
+            for token in &self.forward_map[&id_num] {
                 self.reverse_map
                     .get_mut(token)
                     .unwrap()
-                    .retain(|i| i != id_num);
+                    .retain(|i| *i != id_num);
             }
-            self.forward_map.remove(id_num);
-            self.ids.retain(|(i, _)| i != id);
+            self.forward_map.remove(&id_num);
+            self.ids[id_num] = None;
         }
     }
 

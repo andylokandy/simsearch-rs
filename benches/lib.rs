@@ -15,21 +15,20 @@ fn load_content() -> json::JsonValue {
 }
 
 fn bench_engine(c: &mut Criterion) {
-    c.bench_function("add 100", |bencher| {
+    c.bench_function("add books", |bencher| {
         let j = load_content();
 
         let mut books: Vec<(&str, &str)> = Vec::new();
 
-        for book in j.members() {
-            let title = book["title"].as_str().unwrap();
-            books.push((title, title));
+        for title in j.members() {
+            books.push((title.as_str().unwrap(), title.as_str().unwrap()));
         }
 
         bencher.iter_batched_ref(
             || SimSearch::new(),
             |engine| {
                 for (title, terms) in &books {
-                    engine.insert(title, terms);
+                    engine.insert(*title, *terms);
                 }
             },
             BatchSize::SmallInput,
@@ -39,9 +38,8 @@ fn bench_engine(c: &mut Criterion) {
         let mut engine = SimSearch::new();
         let j = load_content();
 
-        for book in j.members() {
-            let title = book["title"].as_str().unwrap();
-            engine.insert(title, title);
+        for title in j.members() {
+            engine.insert(title.as_str().unwrap(), title.as_str().unwrap());
         }
 
         bencher.iter(|| engine.search("odl sea"));

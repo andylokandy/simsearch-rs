@@ -14,9 +14,8 @@ fn main() -> io::Result<()> {
 
     let j = json::parse(&content).unwrap();
 
-    for book in j.members() {
-        let title = book["title"].as_str().unwrap();
-        engine.insert(title.to_owned(), title);
+    for title in j.members() {
+        engine.insert(title.as_str().unwrap(), title.as_str().unwrap());
     }
 
     println!("Please input a query string and hit enter (e.g 'old man'):",);

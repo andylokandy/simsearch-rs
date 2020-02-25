@@ -22,9 +22,8 @@ fn populate_engine() -> SimSearch<String> {
 
     let j = json::parse(&content).unwrap();
 
-    for book in j.members() {
-        let title = book["title"].as_str().unwrap();
-        engine.insert(title.to_owned(), title);
+    for title in j.members() {
+        engine.insert(title.as_str().unwrap().to_string(), title.as_str().unwrap());
     }
 
     engine

@@ -19,7 +19,7 @@
 
 use std::collections::HashMap;
 
-use strsim::{levenshtein, normalized_levenshtein};
+use strsim::jaro_winkler;
 
 /// The simple search engine.
 pub struct SimSearch<Id>
@@ -62,12 +62,11 @@ where
 
     /// Inserts an entry into search engine.
     ///
-    /// Input will be tokenized by the built-in tokenizer,
-    /// by default whitespaces(including tabs) are considered as stop words,
+    /// Input will be tokenized according to the search option.
+    /// By default whitespaces(including tabs) are considered as stop words,
     /// you can change the behavior by providing `SearchOptions`.
     ///
-    /// Search engine will delete the existing entry
-    /// with same id before inserting the new one.
+    /// Insert with an existing id updates the content.
     ///
     /// **Note that** id is not searchable. Add id to the contents if you would
     /// like to perform search on it.
@@ -87,17 +86,16 @@ where
     /// Alison Brie, Paul F. Tompkins, and Aaron Paul.");
     /// ```
     pub fn insert(&mut self, id: Id, content: &str) {
-        self.insert_tokenized(id, &[content])
+        self.insert_tokens(id, &[content])
     }
 
-    /// Inserts a pre-tokenized entry into search engine.
+    /// Inserts entry tokens into search engine.
     ///
-    /// Search engine will apply built-in tokenizer on the
-    /// provided tokens again. Use this method when you have
-    /// special tokenizing rules in addition to the built-in ones.
+    /// Search engine also applies tokenizer to the
+    /// provided tokens. Use this method when you have
+    /// special tokenization rules in addition to the built-in ones.
     ///
-    /// Search engine will delete the existing entry
-    /// with same id before inserting the new one.
+    /// Insert with an existing id updates the content.
     ///
     /// **Note that** id is not searchable. Add id to the contents if you would
     /// like to perform search on it.
@@ -109,9 +107,9 @@ where
     ///
     /// let mut engine: SimSearch<&str> = SimSearch::new();
     ///
-    /// engine.insert_tokenized("Arya Stark", &["Arya Stark", "a fictional
+    /// engine.insert_tokens("Arya Stark", &["Arya Stark", "a fictional
     /// character in American author George R. R", "portrayed by English actress."]);
-    pub fn insert_tokenized(&mut self, id: Id, tokens: &[&str]) {
+    pub fn insert_tokens(&mut self, id: Id, tokens: &[&str]) {
         self.delete(&id);
 
         let id_num = self.ids.len();
@@ -131,10 +129,10 @@ where
         self.forward_map.insert(id_num, tokens);
     }
 
-    /// Searches for pattern and returns ids sorted by relevance.
+    /// Searches pattern and returns ids sorted by relevance.
     ///
-    /// Pattern will be tokenized by the built-in tokenizer,
-    /// by default whitespaces(including tabs) are considered as stop words,
+    /// Pattern will be tokenized according to the search option.
+    /// By default whitespaces(including tabs) are considered as stop words,
     /// you can change the behavior by providing `SearchOptions`.
     ///
     /// # Examples
@@ -152,14 +150,14 @@ where
     ///
     /// assert_eq!(results, &[1]);
     pub fn search(&self, pattern: &str) -> Vec<Id> {
-        self.search_tokenized(&[pattern])
+        self.search_tokens(&[pattern])
     }
 
-    /// Searches for pre-tokenized pattern and returns ids sorted by relevance.
+    /// Searches pattern tokens and returns ids sorted by relevance.
     ///
-    /// Search engine will apply built-in tokenizer on the provided
-    /// tokens again. Use this method when you have special
-    /// tokenizing rules in addition to the built-in ones.
+    /// Search engine also applies tokenizer to the
+    /// provided tokens. Use this method when you have
+    /// special tokenization rules in addition to the built-in ones.
     ///
     /// # Examples
     ///
@@ -172,10 +170,10 @@ where
     /// engine.insert(2, "The Old Man and the Sea");
     /// engine.insert(3, "James Joyce");
     ///
-    /// let results: Vec<u32> = engine.search_tokenized(&["thngs", "apa"]);
+    /// let results: Vec<u32> = engine.search_tokens(&["thngs", "apa"]);
     ///
     /// assert_eq!(results, &[1]);
-    pub fn search_tokenized(&self, pattern_tokens: &[&str]) -> Vec<Id> {
+    pub fn search_tokens(&self, pattern_tokens: &[&str]) -> Vec<Id> {
         let mut pattern_tokens = self.tokenize(pattern_tokens);
         pattern_tokens.sort();
         pattern_tokens.dedup();
@@ -184,24 +182,9 @@ where
 
         for pattern_token in pattern_tokens {
             for token in self.reverse_map.keys() {
-                let distance = levenshtein(&token, &pattern_token);
-                let len_diff = token.len().saturating_sub(pattern_token.len());
-                let score =
-                    1. - ((distance.saturating_sub(len_diff)) as f64 / pattern_token.len() as f64);
-
+                let score = jaro_winkler(token, &pattern_token);
                 if score > self.option.threshold {
-                    let prefix_len = token.len() / 2;
-                    let prefix_token =
-                        String::from_utf8_lossy(token.as_bytes().split_at(prefix_len).0);
-                    let score = (score
-                        + normalized_levenshtein(&prefix_token, &pattern_token) as f64
-                            / prefix_len as f64)
-                        / 2.;
-                    let score_current = token_scores
-                        .get(&token.as_str())
-                        .map(|score| *score)
-                        .unwrap_or(0.);
-                    token_scores.insert(token, score_current.max(score));
+                    token_scores.insert(token, score);
                 }
             }
         }
@@ -233,10 +216,7 @@ where
 
     /// Deletes entry by id.
     pub fn delete(&mut self, id: &Id) {
-        let id_num = self
-            .ids
-            .iter()
-            .position(|i| i.as_ref() == Some(id));
+        let id_num = self.ids.iter().position(|i| i.as_ref() == Some(id));
         if let Some(id_num) = id_num {
             for token in &self.forward_map[&id_num] {
                 self.reverse_map
@@ -284,7 +264,7 @@ where
     }
 }
 
-/// Options and flags which can be used to configure how the search engine works.
+/// Options and flags that configuring the search engine.
 ///
 /// # Examples
 ///
@@ -302,17 +282,17 @@ pub struct SearchOptions {
 }
 
 impl SearchOptions {
-    /// Creates a blank new set of options ready for configuration.
+    /// Creates a default configuration.
     pub fn new() -> Self {
         SearchOptions {
             case_sensitive: false,
             stop_whitespace: true,
             stop_words: &[],
-            threshold: 0.7,
+            threshold: 0.8,
         }
     }
 
-    /// Sets the option for case sensitive.
+    /// Sets whether search engine is case sensitive or not.
     ///
     /// Defaults to `false`.
     pub fn case_sensitive(self, case_sensitive: bool) -> Self {
@@ -322,11 +302,8 @@ impl SearchOptions {
         }
     }
 
-    /// Sets the option for whitespace tokenizing.
-    ///
-    /// This option enables built-in tokenizer to split entry contents
-    /// or search patterns by UTF-8 whitespace (including tab, returns
-    /// and so forth).
+    /// Sets the whether search engine splits tokens on whitespace or not.
+    /// The **whitespace** here includes tab, returns and so forth.
     ///
     /// See also [`std::str::split_whitespace()`](https://doc.rust-lang.org/std/primitive.str.html#method.split_whitespace).
     ///
@@ -338,12 +315,12 @@ impl SearchOptions {
         }
     }
 
-    /// Sets the option for custom tokenizing.
+    /// Sets the custom token stop word.
     ///
-    /// This option enables built-in tokenizer to split entry contents
-    /// or search patterns by a list of custom stop words.
+    /// This option enables tokenizer to split contents
+    /// and search words by the extra list of custom stop words.
     ///
-    /// Defaults to be an empty list `&[]`.
+    /// Defaults to `&[]`.
     ///
     /// # Examples
     /// ```
@@ -364,11 +341,11 @@ impl SearchOptions {
 
     /// Sets the threshold for search scoring.
     ///
-    /// Search results will be sorted by their scores. Scores
-    /// ranges from 0 to 1 when the 1 indicates the most relevant.
-    /// Only the entries with scores greater than threshold will be returned.
+    /// Search results will be sorted by their Jaro winkler similarity scores.
+    /// Scores ranges from 0 to 1 where the 1 indicates the most relevant.
+    /// Only the entries with scores greater than the threshold will be returned.
     ///
-    /// Defaults to `0.7`.
+    /// Defaults to `0.8`.
     pub fn threshold(self, threshold: f64) -> Self {
         SearchOptions { threshold, ..self }
     }

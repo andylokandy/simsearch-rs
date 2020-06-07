@@ -16,10 +16,28 @@
 //!
 //! assert_eq!(results, &[1]);
 //! ```
+//! By default, Jaro-Winkler distance is used. SIMD-accelerated Levenshtein distance
+//! for ASCII byte strings is also supported by specifying custom `SearchOptions`:
+//! ```
+//! use simsearch::{SimSearch, SearchOptions};
+//!
+//! let options = SearchOptions::new().levenshtein(true);
+//! let mut engine: SimSearch<u32> = SimSearch::new_with(options);
+//!
+//! engine.insert(1, "Things Fall Apart");
+//! engine.insert(2, "The Old Man and the Sea");
+//! engine.insert(3, "James Joyce");
+//!
+//! let results: Vec<u32> = engine.search("thngs");
+//!
+//! assert_eq!(results, &[1]);
+//! ```
 
+use std;
 use std::collections::HashMap;
 
 use strsim::jaro_winkler;
+use triple_accel::levenshtein::levenshtein_simd_k;
 
 /// The simple search engine.
 pub struct SimSearch<Id>
@@ -173,6 +191,23 @@ where
     /// let results: Vec<u32> = engine.search_tokens(&["thngs", "apa"]);
     ///
     /// assert_eq!(results, &[1]);
+    /// ```
+    /// By default, Jaro-Winkler distance is used. SIMD-accelerated Levenshtein distance
+    /// for ASCII byte strings is also supported by specifying custom `SearchOptions`:
+    /// ```
+    /// use simsearch::{SimSearch, SearchOptions};
+    ///
+    /// let options = SearchOptions::new().levenshtein(true);
+    /// let mut engine: SimSearch<u32> = SimSearch::new_with(options);
+    ///
+    /// engine.insert(1, "Things Fall Apart");
+    /// engine.insert(2, "The Old Man and the Sea");
+    /// engine.insert(3, "James Joyce");
+    ///
+    /// let results: Vec<u32> = engine.search_tokens(&["thngs", "apa"]);
+    ///
+    /// assert_eq!(results, &[1]);
+    /// ```
     pub fn search_tokens(&self, pattern_tokens: &[&str]) -> Vec<Id> {
         let mut pattern_tokens = self.tokenize(pattern_tokens);
         pattern_tokens.sort();
@@ -182,7 +217,19 @@ where
 
         for pattern_token in pattern_tokens {
             for token in self.reverse_map.keys() {
-                let score = jaro_winkler(token, &pattern_token);
+                let score = if self.option.levenshtein {
+                    let len = std::cmp::max(token.len(), pattern_token.len()) as f64;
+                    // calculate k (based on the threshold) to bound the Levenshtein distance
+                    let k = ((1.0 - self.option.threshold) * len).ceil() as u32;
+                    // levenshtein_simd_k only works for ASCII (byte) strings!
+                    match levenshtein_simd_k(token.as_bytes(), pattern_token.as_bytes(), k) {
+                        Some(dist) => 1.0 - if len == 0.0 {0.0} else {(dist as f64) / len},
+                        None => std::f64::MIN,
+                    }
+                } else {
+                    jaro_winkler(token, &pattern_token)
+                };
+
                 if score > self.option.threshold {
                     token_scores.insert(token, score);
                 }
@@ -279,6 +326,7 @@ pub struct SearchOptions {
     stop_whitespace: bool,
     stop_words: &'static [&'static str],
     threshold: f64,
+    levenshtein: bool,
 }
 
 impl SearchOptions {
@@ -289,6 +337,7 @@ impl SearchOptions {
             stop_whitespace: true,
             stop_words: &[],
             threshold: 0.8,
+            levenshtein: false,
         }
     }
 
@@ -348,5 +397,18 @@ impl SearchOptions {
     /// Defaults to `0.8`.
     pub fn threshold(self, threshold: f64) -> Self {
         SearchOptions { threshold, ..self }
+    }
+
+    /// Sets whether SIMD-accelerated Levenshtein distance should be used instead
+    /// of Jaro-Winkler distance.
+    ///
+    /// For Levenshtein distance, insertions, deletions, and substitutions have an
+    /// associated unit cost. The underlying Levenshtein distance implementation is
+    /// very fast, but it cannot handle unicode strings, unlike the default
+    /// Jaro-Winkler distance.
+    ///
+    /// Defaults to `false`.
+    pub fn levenshtein(self, levenshtein: bool) -> Self {
+        SearchOptions { levenshtein, ..self }
     }
 }

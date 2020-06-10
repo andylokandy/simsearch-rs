@@ -25,10 +25,10 @@
 //!
 //! let options = SearchOptions::new().levenshtein(true);
 //! let mut engine: SimSearch<u32> = SimSearch::new_with(options);
-//!
 //! ```
 
-use std;
+use std::f64;
+use std::cmp::max;
 use std::collections::HashMap;
 
 use strsim::jaro_winkler;
@@ -84,6 +84,9 @@ where
     /// **Note that** id is not searchable. Add id to the contents if you would
     /// like to perform search on it.
     ///
+    /// Additionally, note that content must be an ASCII string if Levenshtein
+    /// distance is used.
+    ///
     /// # Examples
     ///
     /// ```
@@ -112,6 +115,9 @@ where
     ///
     /// **Note that** id is not searchable. Add id to the contents if you would
     /// like to perform search on it.
+    ///
+    /// Additionally, note that each token must be an ASCII string if Levenshtein
+    /// distance is used.
     ///
     /// # Examples
     ///
@@ -148,6 +154,9 @@ where
     /// By default whitespaces(including tabs) are considered as stop words,
     /// you can change the behavior by providing `SearchOptions`.
     ///
+    /// Additionally, note that pattern must be an ASCII string if Levenshtein
+    /// distance is used.
+    ///
     /// # Examples
     ///
     /// ```
@@ -172,28 +181,15 @@ where
     /// provided tokens. Use this method when you have
     /// special tokenization rules in addition to the built-in ones.
     ///
+    /// Additionally, note that each pattern token must be an ASCII
+    /// string if Levenshtein distance is used.
+    ///
     /// # Examples
     ///
     /// ```
     /// use simsearch::SimSearch;
     ///
     /// let mut engine: SimSearch<u32> = SimSearch::new();
-    ///
-    /// engine.insert(1, "Things Fall Apart");
-    /// engine.insert(2, "The Old Man and the Sea");
-    /// engine.insert(3, "James Joyce");
-    ///
-    /// let results: Vec<u32> = engine.search_tokens(&["thngs", "apa"]);
-    ///
-    /// assert_eq!(results, &[1]);
-    /// ```
-    /// By default, Jaro-Winkler distance is used. SIMD-accelerated Levenshtein distance
-    /// for ASCII byte strings is also supported by specifying custom `SearchOptions`:
-    /// ```
-    /// use simsearch::{SimSearch, SearchOptions};
-    ///
-    /// let options = SearchOptions::new().levenshtein(true);
-    /// let mut engine: SimSearch<u32> = SimSearch::new_with(options);
     ///
     /// engine.insert(1, "Things Fall Apart");
     /// engine.insert(2, "The Old Man and the Sea");
@@ -213,13 +209,14 @@ where
         for pattern_token in pattern_tokens {
             for token in self.reverse_map.keys() {
                 let score = if self.option.levenshtein {
-                    let len = std::cmp::max(token.len(), pattern_token.len()) as f64;
+                    let len = max(token.len(), pattern_token.len()) as f64;
                     // calculate k (based on the threshold) to bound the Levenshtein distance
                     let k = ((1.0 - self.option.threshold) * len).ceil() as u32;
-                    // levenshtein_simd_k only works for ASCII (byte) strings!
+                    // levenshtein_simd_k only works on ASCII byte slices, so the token strings
+                    // are directly treated as byte slices
                     match levenshtein_simd_k(token.as_bytes(), pattern_token.as_bytes(), k) {
                         Some(dist) => 1.0 - if len == 0.0 {0.0} else {(dist as f64) / len},
-                        None => std::f64::MIN,
+                        None => f64::MIN,
                     }
                 } else {
                     jaro_winkler(token, &pattern_token)
@@ -398,7 +395,10 @@ impl SearchOptions {
     /// used instead of the default Jaro-Winkler distance.
     ///
     /// The implementation of Levenshtein distance is very fast but cannot handle Unicode
-    /// strings, unlike the default Jaro-Winkler distance.
+    /// strings, unlike the default Jaro-Winkler distance. The strings are treated as byte
+    /// slices with Levenshtein distance, which means that the calculated score may be
+    /// incorrectly lower for Unicode strings, where each character is represented with
+    /// multiple bytes.
     ///
     /// Defaults to `false`.
     pub fn levenshtein(self, levenshtein: bool) -> Self {

@@ -32,8 +32,11 @@ let results: Vec<u32> = engine.search("thngs");
 
 assert_eq!(results, &[1]);
 ```
-By default, Jaro-Winkler distance is used. SIMD-accelerated Levenshtein distance
-for ASCII byte strings is also supported by specifying custom `SearchOptions`:
+
+By default, Jaro-Winkler distance is used. An alternative Levenshtein distance,
+which is SIMD-accelerated but only works for ASCII byte strings, can be specified
+with custom `SearchOptions`:
+
 ```rust
 use simsearch::{SimSearch, SearchOptions};
 

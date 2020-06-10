@@ -16,21 +16,16 @@
 //!
 //! assert_eq!(results, &[1]);
 //! ```
-//! By default, Jaro-Winkler distance is used. SIMD-accelerated Levenshtein distance
-//! for ASCII byte strings is also supported by specifying custom `SearchOptions`:
+//!
+//! By default, Jaro-Winkler distance is used. An alternative Levenshtein distance, which is
+//! SIMD-accelerated but only works for ASCII byte strings, can be specified with `SearchOptions`:
+//!
 //! ```
 //! use simsearch::{SimSearch, SearchOptions};
 //!
 //! let options = SearchOptions::new().levenshtein(true);
 //! let mut engine: SimSearch<u32> = SimSearch::new_with(options);
 //!
-//! engine.insert(1, "Things Fall Apart");
-//! engine.insert(2, "The Old Man and the Sea");
-//! engine.insert(3, "James Joyce");
-//!
-//! let results: Vec<u32> = engine.search("thngs");
-//!
-//! assert_eq!(results, &[1]);
 //! ```
 
 use std;
@@ -399,13 +394,11 @@ impl SearchOptions {
         SearchOptions { threshold, ..self }
     }
 
-    /// Sets whether SIMD-accelerated Levenshtein distance should be used instead
-    /// of Jaro-Winkler distance.
+    /// Sets whether Levenshtein distance, which is SIMD-accelerated, should be
+    /// used instead of the default Jaro-Winkler distance.
     ///
-    /// For Levenshtein distance, insertions, deletions, and substitutions have an
-    /// associated unit cost. The underlying Levenshtein distance implementation is
-    /// very fast, but it cannot handle unicode strings, unlike the default
-    /// Jaro-Winkler distance.
+    /// The implementation of Levenshtein distance is very fast but cannot handle Unicode
+    /// strings, unlike the default Jaro-Winkler distance.
     ///
     /// Defaults to `false`.
     pub fn levenshtein(self, levenshtein: bool) -> Self {

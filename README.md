@@ -39,14 +39,6 @@ use simsearch::{SimSearch, SearchOptions};
 
 let options = SearchOptions::new().levenshtein(true);
 let mut engine: SimSearch<u32> = SimSearch::new_with(options);
-
-engine.insert(1, "Things Fall Apart");
-engine.insert(2, "The Old Man and the Sea");
-engine.insert(3, "James Joyce");
-
-let results: Vec<u32> = engine.search("thngs");
-
-assert_eq!(results, &[1]);
 ```
 
 Also try the interactive demo by:

@@ -17,6 +17,7 @@ categories = ["algorithms", "text-processing"]
 
 [dependencies]
 strsim = "0.10"
+triple_accel = "0.2.2"
 
 [dev-dependencies]
 json = "0.11.13"

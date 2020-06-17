@@ -3,7 +3,7 @@ use std::io::Read;
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use json;
-use simsearch::SimSearch;
+use simsearch::{SimSearch, SearchOptions};
 
 /// Loads content of a 'books.json' file into a JsonValue.
 fn load_content() -> json::JsonValue {
@@ -34,8 +34,19 @@ fn bench_engine(c: &mut Criterion) {
             BatchSize::SmallInput,
         )
     });
-    c.bench_function("search", |bencher| {
+    c.bench_function("search_jaro_winkler", |bencher| {
         let mut engine = SimSearch::new();
+        let j = load_content();
+
+        for title in j.members() {
+            engine.insert(title.as_str().unwrap(), title.as_str().unwrap());
+        }
+
+        bencher.iter(|| engine.search("odl sea"));
+    });
+    c.bench_function("search_levenshtein", |bencher| {
+        let options = SearchOptions::new().levenshtein(true);
+        let mut engine = SimSearch::new_with(options);
         let j = load_content();
 
         for title in j.members() {

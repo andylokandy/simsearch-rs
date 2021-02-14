@@ -26,6 +26,16 @@
 //! let options = SearchOptions::new().levenshtein(true);
 //! let mut engine: SimSearch<u32> = SimSearch::new_with(options);
 //! ```
+//!
+//! # Serialization through [`serde`] support
+//!
+//! The Simsearch collection has full (de)seralization support through
+//! the [`serde`] library. You can enable this by adding the `serde`
+//! feature flag for `simsearch` in your `Cargo.toml`.
+//!
+//! ```text
+//! simsearch = { version = "0.2", features = ["serde"] }
+//! ```
 
 use std::f64;
 use std::cmp::max;

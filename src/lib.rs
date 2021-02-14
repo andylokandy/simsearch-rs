@@ -34,7 +34,11 @@ use std::collections::HashMap;
 use strsim::jaro_winkler;
 use triple_accel::levenshtein::levenshtein_simd_k;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// The simple search engine.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimSearch<Id>
 where
     Id: PartialEq + Clone,

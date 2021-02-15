@@ -33,9 +33,6 @@ quickcheck_macros = "0.8"
 itertools = "0.8"
 criterion = "0.2.11"
 
-[dev-dependencies.serde]
-version = "1.0"
-
 [[bench]]
 name = "lib"
 harness = false

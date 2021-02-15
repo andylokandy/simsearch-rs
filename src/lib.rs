@@ -296,7 +296,7 @@ where
         for stop_word in &self.option.stop_words {
             tokens = tokens
                 .iter()
-                .flat_map(|token| token.split_terminator((stop_word.as_str())))
+                .flat_map(|token| token.split_terminator(stop_word.as_str()))
                 .map(|token| token.to_string())
                 .collect();
         }
@@ -317,7 +317,6 @@ where
 /// let mut engine: SimSearch<usize> = SimSearch::new_with(
 ///     SearchOptions::new().case_sensitive(true));
 /// ```
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SearchOptions {
     case_sensitive: bool,
     stop_whitespace: bool,

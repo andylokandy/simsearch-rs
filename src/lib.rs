@@ -317,6 +317,7 @@ where
 /// let mut engine: SimSearch<usize> = SimSearch::new_with(
 ///     SearchOptions::new().case_sensitive(true));
 /// ```
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SearchOptions {
     case_sensitive: bool,
     stop_whitespace: bool,

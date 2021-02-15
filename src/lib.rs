@@ -34,7 +34,11 @@ use std::collections::HashMap;
 use strsim::jaro_winkler;
 use triple_accel::levenshtein::levenshtein_simd_k;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// The simple search engine.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimSearch<Id>
 where
     Id: PartialEq + Clone,
@@ -93,7 +97,7 @@ where
     /// use simsearch::{SearchOptions, SimSearch};
     ///
     /// let mut engine: SimSearch<&str> = SimSearch::new_with(
-    ///     SearchOptions::new().stop_words(&[",", "."]));
+    ///     SearchOptions::new().stop_words(vec![",", "."]));
     ///
     /// engine.insert("BoJack Horseman", "BoJack Horseman, an American
     /// adult animated comedy-drama series created by Raphael Bob-Waksberg.
@@ -289,10 +293,10 @@ where
             tokens
         };
 
-        for stop_word in self.option.stop_words {
+        for stop_word in &self.option.stop_words {
             tokens = tokens
                 .iter()
-                .flat_map(|token| token.split_terminator(stop_word))
+                .flat_map(|token| token.split_terminator(stop_word.as_str()))
                 .map(|token| token.to_string())
                 .collect();
         }
@@ -313,10 +317,11 @@ where
 /// let mut engine: SimSearch<usize> = SimSearch::new_with(
 ///     SearchOptions::new().case_sensitive(true));
 /// ```
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SearchOptions {
     case_sensitive: bool,
     stop_whitespace: bool,
-    stop_words: &'static [&'static str],
+    stop_words: Vec<String>,
     threshold: f64,
     levenshtein: bool,
 }
@@ -327,7 +332,7 @@ impl SearchOptions {
         SearchOptions {
             case_sensitive: false,
             stop_whitespace: true,
-            stop_words: &[],
+            stop_words: vec![],
             threshold: 0.8,
             levenshtein: false,
         }
@@ -368,7 +373,7 @@ impl SearchOptions {
     /// use simsearch::{SearchOptions, SimSearch};
     ///
     /// let mut engine: SimSearch<usize> = SimSearch::new_with(
-    ///     SearchOptions::new().stop_words(&["/", "\\"]));
+    ///     SearchOptions::new().stop_words(vec!["/", "\\"]));
     ///
     /// engine.insert(1, "the old/man/and/the sea");
     ///
@@ -376,7 +381,7 @@ impl SearchOptions {
     ///
     /// assert_eq!(results, &[1]);
     /// ```
-    pub fn stop_words(self, stop_words: &'static [&'static str]) -> Self {
+    pub fn stop_words(self, stop_words: Vec<String>) -> Self {
         SearchOptions { stop_words, ..self }
     }
 

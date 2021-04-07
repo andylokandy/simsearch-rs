@@ -27,9 +27,10 @@
 //! let mut engine: SimSearch<u32> = SimSearch::new_with(options);
 //! ```
 
-use std::f64;
 use std::cmp::max;
 use std::collections::HashMap;
+use std::f64;
+use std::hash::Hash;
 
 use strsim::jaro_winkler;
 use triple_accel::levenshtein::levenshtein_simd_k;
@@ -41,17 +42,19 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimSearch<Id>
 where
-    Id: PartialEq + Clone,
+    Id: Eq + PartialEq + Clone + Hash,
 {
     option: SearchOptions,
-    ids: Vec<Option<Id>>,
+    id_num_counter: usize,
+    ids_map: HashMap<Id, usize>,
+    reverse_ids_map: HashMap<usize, Id>,
     forward_map: HashMap<usize, Vec<String>>,
     reverse_map: HashMap<String, Vec<usize>>,
 }
 
 impl<Id> SimSearch<Id>
 where
-    Id: PartialEq + Clone,
+    Id: Eq + PartialEq + Clone + Hash,
 {
     /// Creates search engine with default options.
     pub fn new() -> Self {
@@ -71,7 +74,9 @@ where
     pub fn new_with(option: SearchOptions) -> Self {
         SimSearch {
             option,
-            ids: Vec::new(),
+            id_num_counter: 0,
+            ids_map: HashMap::new(),
+            reverse_ids_map: HashMap::new(),
             forward_map: HashMap::new(),
             reverse_map: HashMap::new(),
         }
@@ -97,7 +102,7 @@ where
     /// use simsearch::{SearchOptions, SimSearch};
     ///
     /// let mut engine: SimSearch<&str> = SimSearch::new_with(
-    ///     SearchOptions::new().stop_words(vec![",", "."]));
+    ///     SearchOptions::new().stop_words(vec![",".to_string(), ".".to_string()]));
     ///
     /// engine.insert("BoJack Horseman", "BoJack Horseman, an American
     /// adult animated comedy-drama series created by Raphael Bob-Waksberg.
@@ -135,8 +140,10 @@ where
     pub fn insert_tokens(&mut self, id: Id, tokens: &[&str]) {
         self.delete(&id);
 
-        let id_num = self.ids.len();
-        self.ids.push(Some(id));
+        let id_num = self.id_num_counter;
+        self.ids_map.insert(id.clone(), id_num);
+        self.reverse_ids_map.insert(id_num, id);
+        self.id_num_counter += 1;
 
         let mut tokens = self.tokenize(tokens);
         tokens.sort();
@@ -219,7 +226,7 @@ where
                     // levenshtein_simd_k only works on ASCII byte slices, so the token strings
                     // are directly treated as byte slices
                     match levenshtein_simd_k(token.as_bytes(), pattern_token.as_bytes(), k) {
-                        Some(dist) => 1.0 - if len == 0.0 {0.0} else {(dist as f64) / len},
+                        Some(dist) => 1.0 - if len == 0.0 { 0.0 } else { (dist as f64) / len },
                         None => f64::MIN,
                     }
                 } else {
@@ -246,30 +253,31 @@ where
         let result_ids: Vec<Id> = result_scores
             .iter()
             .map(|(id_num, _)| {
-                self.ids[*id_num]
-                    .as_ref()
-                    .map(|id| id.clone())
+                self.reverse_ids_map
+                    .get(id_num)
                     // this can go wrong only if something (e.g. delete) leaves us in an
                     // inconsistent state
                     .expect("id at id_num should be there")
-            }).collect();
+                    .to_owned()
+            })
+            .collect();
 
         result_ids
     }
 
     /// Deletes entry by id.
     pub fn delete(&mut self, id: &Id) {
-        let id_num = self.ids.iter().position(|i| i.as_ref() == Some(id));
-        if let Some(id_num) = id_num {
+        if let Some(id_num) = self.ids_map.get(id) {
             for token in &self.forward_map[&id_num] {
                 self.reverse_map
                     .get_mut(token)
                     .unwrap()
-                    .retain(|i| *i != id_num);
+                    .retain(|i| i != id_num);
             }
             self.forward_map.remove(&id_num);
-            self.ids[id_num] = None;
-        }
+            self.reverse_ids_map.remove(id_num);
+            self.ids_map.remove(id);
+        };
     }
 
     fn tokenize(&self, tokens: &[&str]) -> Vec<String> {
@@ -281,7 +289,8 @@ where
                 } else {
                     token.to_lowercase()
                 }
-            }).collect();
+            })
+            .collect();
 
         let mut tokens: Vec<String> = if self.option.stop_whitespace {
             tokens
@@ -373,7 +382,7 @@ impl SearchOptions {
     /// use simsearch::{SearchOptions, SimSearch};
     ///
     /// let mut engine: SimSearch<usize> = SimSearch::new_with(
-    ///     SearchOptions::new().stop_words(vec!["/", "\\"]));
+    ///     SearchOptions::new().stop_words(vec!["/".to_string(), "\\".to_string()]));
     ///
     /// engine.insert(1, "the old/man/and/the sea");
     ///
@@ -407,6 +416,9 @@ impl SearchOptions {
     ///
     /// Defaults to `false`.
     pub fn levenshtein(self, levenshtein: bool) -> Self {
-        SearchOptions { levenshtein, ..self }
+        SearchOptions {
+            levenshtein,
+            ..self
+        }
     }
 }

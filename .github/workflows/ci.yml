@@ -43,6 +43,6 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-      - name: Tests
+      - name: Benchmark
         run: |
           cargo bench --verbose

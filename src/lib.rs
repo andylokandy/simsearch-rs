@@ -27,7 +27,7 @@
 //! let mut engine: SimSearch<u32> = SimSearch::new_with(options);
 //! ```
 
-use std::cmp::max;
+use std::cmp::{max, Ordering};
 use std::collections::HashMap;
 use std::f64;
 use std::hash::Hash;
@@ -39,10 +39,11 @@ use triple_accel::levenshtein::levenshtein_simd_k;
 use serde::{Deserialize, Serialize};
 
 /// The simple search engine.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SimSearch<Id>
 where
-    Id: Eq + PartialEq + Clone + Hash,
+    Id: Eq + PartialEq + Clone + Hash + Ord,
 {
     option: SearchOptions,
     id_num_counter: usize,
@@ -54,7 +55,7 @@ where
 
 impl<Id> SimSearch<Id>
 where
-    Id: Eq + PartialEq + Clone + Hash,
+    Id: Eq + PartialEq + Clone + Hash + Ord,
 {
     /// Creates search engine with default options.
     pub fn new() -> Self {
@@ -247,20 +248,28 @@ where
             }
         }
 
-        let mut result_scores: Vec<(usize, f64)> = result_scores.drain().collect();
-        result_scores.sort_by(|lhs, rhs| rhs.1.partial_cmp(&lhs.1).unwrap());
-
-        let result_ids: Vec<Id> = result_scores
-            .iter()
-            .map(|(id_num, _)| {
-                self.reverse_ids_map
-                    .get(id_num)
+        let mut result_scores: Vec<(f64, Id)> = result_scores
+            .drain()
+            .map(|(id_num, score)| {
+                let id = self
+                    .reverse_ids_map
+                    .get(&id_num)
                     // this can go wrong only if something (e.g. delete) leaves us in an
                     // inconsistent state
                     .expect("id at id_num should be there")
-                    .to_owned()
+                    .to_owned();
+                (score, id)
             })
             .collect();
+
+        result_scores.sort_by(|(lhs_score, lhs_id), (rhs_score, rhs_id)| {
+            match rhs_score.partial_cmp(lhs_score).unwrap() {
+                Ordering::Equal => lhs_id.cmp(rhs_id),
+                ord => ord,
+            }
+        });
+
+        let result_ids: Vec<Id> = result_scores.into_iter().map(|(_, id)| id).collect();
 
         result_ids
     }
@@ -268,13 +277,13 @@ where
     /// Deletes entry by id.
     pub fn delete(&mut self, id: &Id) {
         if let Some(id_num) = self.ids_map.get(id) {
-            for token in &self.forward_map[&id_num] {
+            for token in &self.forward_map[id_num] {
                 self.reverse_map
                     .get_mut(token)
                     .unwrap()
                     .retain(|i| i != id_num);
             }
-            self.forward_map.remove(&id_num);
+            self.forward_map.remove(id_num);
             self.reverse_ids_map.remove(id_num);
             self.ids_map.remove(id);
         };
@@ -326,6 +335,7 @@ where
 /// let mut engine: SimSearch<usize> = SimSearch::new_with(
 ///     SearchOptions::new().case_sensitive(true));
 /// ```
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SearchOptions {
     case_sensitive: bool,
@@ -420,5 +430,20 @@ impl SearchOptions {
             levenshtein,
             ..self
         }
+    }
+}
+
+impl<Id> Default for SimSearch<Id>
+where
+    Id: Eq + PartialEq + Clone + Hash + Ord,
+{
+    fn default() -> Self {
+        SimSearch::new()
+    }
+}
+
+impl Default for SearchOptions {
+    fn default() -> Self {
+        SearchOptions::new()
     }
 }

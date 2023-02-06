@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::Read;
 
-use json;
 use simsearch::{SearchOptions, SimSearch};
 
 #[macro_use(quickcheck)]

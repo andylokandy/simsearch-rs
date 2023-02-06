@@ -2,8 +2,8 @@ use std::fs::File;
 use std::io::Read;
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use json;
-use simsearch::{SimSearch, SearchOptions};
+
+use simsearch::{SearchOptions, SimSearch};
 
 /// Loads content of a 'books.json' file into a JsonValue.
 fn load_content() -> json::JsonValue {
@@ -25,7 +25,7 @@ fn bench_engine(c: &mut Criterion) {
         }
 
         bencher.iter_batched_ref(
-            || SimSearch::new(),
+            SimSearch::new,
             |engine| {
                 for (title, terms) in &books {
                     engine.insert(*title, *terms);

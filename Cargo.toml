@@ -2,7 +2,7 @@
 authors = ["andylokandy <andylokandy@hotmail.com>"]
 edition = "2018"
 name = "simsearch"
-version = "0.2.4"
+version = "0.2.5"
 license = "MIT/Apache-2.0"
 
 description = "A simple and lightweight fuzzy search engine that works in memory, searching for similar strings (a pun here)."

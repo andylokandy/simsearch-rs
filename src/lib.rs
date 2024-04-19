@@ -148,7 +148,6 @@ where
 
         let mut tokens = self.tokenize(tokens);
         tokens.sort();
-        tokens.dedup();
 
         for token in tokens.clone() {
             self.reverse_map
@@ -214,7 +213,6 @@ where
     pub fn search_tokens(&self, pattern_tokens: &[&str]) -> Vec<Id> {
         let mut pattern_tokens = self.tokenize(pattern_tokens);
         pattern_tokens.sort();
-        pattern_tokens.dedup();
 
         let mut token_scores: HashMap<&str, f64> = HashMap::new();
 

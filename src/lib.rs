@@ -287,6 +287,15 @@ where
         };
     }
 
+    /// Removes all entries and resets the search state.
+    pub fn reset(&mut self) {
+        self.forward_map.clear();
+        self.reverse_map.clear();
+        self.ids_map.clear();
+        self.reverse_ids_map.clear();
+        self.id_num_counter = 0;
+    }
+
     fn tokenize(&self, tokens: &[&str]) -> Vec<String> {
         let tokens: Vec<String> = tokens
             .iter()

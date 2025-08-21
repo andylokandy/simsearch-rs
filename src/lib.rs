@@ -272,8 +272,8 @@ where
         result_ids
     }
 
-    /// Deletes entry by id.
-    pub fn delete(&mut self, id: &Id) {
+    /// Remove an entry by id.
+    pub fn remove(&mut self, id: &Id) {
         if let Some(id_num) = self.ids_map.get(id) {
             for token in &self.forward_map[id_num] {
                 self.reverse_map
@@ -287,8 +287,8 @@ where
         };
     }
 
-    /// Removes all entries and resets the search state.
-    pub fn reset(&mut self) {
+    /// Clear all entries.
+    pub fn clear(&mut self) {
         self.forward_map.clear();
         self.reverse_map.clear();
         self.ids_map.clear();

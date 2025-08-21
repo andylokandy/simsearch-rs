@@ -139,7 +139,7 @@ where
     /// engine.insert_tokens("Arya Stark", &["Arya Stark", "a fictional
     /// character in American author George R. R", "portrayed by English actress."]);
     pub fn insert_tokens(&mut self, id: Id, tokens: &[&str]) {
-        self.delete(&id);
+        self.remove(&id);
 
         let id_num = self.id_num_counter;
         self.ids_map.insert(id.clone(), id_num);
@@ -272,8 +272,8 @@ where
         result_ids
     }
 
-    /// Deletes entry by id.
-    pub fn delete(&mut self, id: &Id) {
+    /// Remove an entry by id.
+    pub fn remove(&mut self, id: &Id) {
         if let Some(id_num) = self.ids_map.get(id) {
             for token in &self.forward_map[id_num] {
                 self.reverse_map
@@ -285,6 +285,15 @@ where
             self.reverse_ids_map.remove(id_num);
             self.ids_map.remove(id);
         };
+    }
+
+    /// Clear all entries.
+    pub fn clear(&mut self) {
+        self.forward_map.clear();
+        self.reverse_map.clear();
+        self.ids_map.clear();
+        self.reverse_ids_map.clear();
+        self.id_num_counter = 0;
     }
 
     fn tokenize(&self, tokens: &[&str]) -> Vec<String> {

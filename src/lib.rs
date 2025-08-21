@@ -139,7 +139,7 @@ where
     /// engine.insert_tokens("Arya Stark", &["Arya Stark", "a fictional
     /// character in American author George R. R", "portrayed by English actress."]);
     pub fn insert_tokens(&mut self, id: Id, tokens: &[&str]) {
-        self.delete(&id);
+        self.remove(&id);
 
         let id_num = self.id_num_counter;
         self.ids_map.insert(id.clone(), id_num);

@@ -289,11 +289,11 @@ where
 
     /// Clear all entries.
     pub fn clear(&mut self) {
-        self.forward_map.clear();
-        self.reverse_map.clear();
+        self.id_num_counter = 0;
         self.ids_map.clear();
         self.reverse_ids_map.clear();
-        self.id_num_counter = 0;
+        self.forward_map.clear();
+        self.reverse_map.clear();
     }
 
     fn tokenize(&self, tokens: &[&str]) -> Vec<String> {

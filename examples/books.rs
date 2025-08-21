@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::io::Read as _;
 
 use inquire::ui::{Color, RenderConfig, StyleSheet, Styled};
 use inquire::{
@@ -17,7 +16,7 @@ fn main() {
         .with_help_message("Try typing 'old man'")
         .with_page_size(15)
         .prompt()
-        .unwrap();
+        .ok();
 }
 
 #[derive(Clone)]
@@ -27,14 +26,18 @@ pub struct BookSearcher {
 
 impl BookSearcher {
     pub fn load() -> Self {
+        let mut file = File::open("./books.json").unwrap();
+        let json: serde_json::Value = serde_json::from_reader(&mut file).unwrap();
+        let books = json
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_string())
+            .collect::<Vec<_>>();
         let mut engine = SimSearch::new();
 
-        let mut file = File::open("./books.json").unwrap();
-        let mut content = String::new();
-        file.read_to_string(&mut content).unwrap();
-        let j = json::parse(&content).unwrap();
-        for title in j.members() {
-            engine.insert(title.as_str().unwrap().to_string(), title.as_str().unwrap());
+        for title in books {
+            engine.insert(title.clone(), &title);
         }
 
         BookSearcher { engine }
@@ -55,7 +58,7 @@ impl Autocomplete for BookSearcher {
     }
 }
 
-fn get_render_config() -> RenderConfig {
+fn get_render_config() -> RenderConfig<'static> {
     let mut render_config = RenderConfig::default();
 
     render_config.prompt_prefix = Styled::new(">").with_fg(Color::LightRed);

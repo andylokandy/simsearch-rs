@@ -14,7 +14,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-simsearch = "0.2"
+simsearch = "0.3"
 ```
 
 ## Example
